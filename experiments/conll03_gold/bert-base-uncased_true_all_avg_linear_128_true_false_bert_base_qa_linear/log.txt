@@ -1,0 +1,72 @@
+12/30/2021 22:29:29 - INFO - SpanNER -   Read 40 train samples.
+12/30/2021 22:29:29 - INFO - SpanNER -   Finished reading all train samples
+12/30/2021 22:29:29 - INFO - SpanNER -   Read 3254 valid samples, choosing 2048 subset
+12/30/2021 22:29:29 - INFO - SpanNER -   Loaded saved entities info
+12/30/2021 22:29:29 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:29:29 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:29:30 - INFO - SpanNER -   Loaded saved entities info
+12/30/2021 22:29:30 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:29:30 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:29:30 - INFO - SpanNER -   Loaded saved entity encodings
+12/30/2021 22:29:30 - INFO - SpanNER -   Starting training
+12/30/2021 22:29:30 - INFO - SpanNER -   device: cuda n_gpu: 4, distributed training: False
+12/30/2021 22:29:30 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:29:30 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:29:30 - INFO - SpanNER -   Finished preparing training data
+12/30/2021 22:29:30 - INFO - SpanNER -    Num optimization steps = 2000
+12/30/2021 22:29:30 - INFO - SpanNER -    Num warmup steps = 0
+12/30/2021 22:29:30 - INFO - SpanNER -   Num samples per batch : 40
+12/30/2021 22:31:13 - INFO - SpanNER -   Read 40 train samples.
+12/30/2021 22:31:13 - INFO - SpanNER -   Finished reading all train samples
+12/30/2021 22:31:13 - INFO - SpanNER -   Read 3254 valid samples, choosing 2048 subset
+12/30/2021 22:31:13 - INFO - SpanNER -   Loaded saved entities info
+12/30/2021 22:31:13 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:31:13 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:31:13 - INFO - SpanNER -   Loaded saved entities info
+12/30/2021 22:31:13 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:31:13 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:31:14 - INFO - SpanNER -   Loaded saved entity encodings
+12/30/2021 22:31:14 - INFO - SpanNER -   Starting training
+12/30/2021 22:31:14 - INFO - SpanNER -   device: cuda n_gpu: 4, distributed training: False
+12/30/2021 22:31:14 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:31:14 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:31:14 - INFO - SpanNER -   Finished preparing training data
+12/30/2021 22:31:14 - INFO - SpanNER -    Num optimization steps = 2000
+12/30/2021 22:31:14 - INFO - SpanNER -    Num warmup steps = 0
+12/30/2021 22:31:14 - INFO - SpanNER -   Num samples per batch : 40
+12/30/2021 22:32:45 - INFO - SpanNER -   Read 40 train samples.
+12/30/2021 22:32:45 - INFO - SpanNER -   Finished reading all train samples
+12/30/2021 22:32:45 - INFO - SpanNER -   Read 3254 valid samples, choosing 2048 subset
+12/30/2021 22:32:45 - INFO - SpanNER -   Loaded saved entities info
+12/30/2021 22:32:45 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:32:45 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:32:45 - INFO - SpanNER -   Loaded saved entities info
+12/30/2021 22:32:45 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:32:45 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:32:45 - INFO - SpanNER -   Loaded saved entity encodings
+12/30/2021 22:32:45 - INFO - SpanNER -   Starting training
+12/30/2021 22:32:45 - INFO - SpanNER -   device: cuda n_gpu: 4, distributed training: False
+12/30/2021 22:32:45 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:32:45 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:32:45 - INFO - SpanNER -   Finished preparing training data
+12/30/2021 22:32:45 - INFO - SpanNER -    Num optimization steps = 2000
+12/30/2021 22:32:45 - INFO - SpanNER -    Num warmup steps = 0
+12/30/2021 22:32:45 - INFO - SpanNER -   Num samples per batch : 40
+12/30/2021 22:34:49 - INFO - SpanNER -   Read 40 train samples.
+12/30/2021 22:34:49 - INFO - SpanNER -   Finished reading all train samples
+12/30/2021 22:34:50 - INFO - SpanNER -   Read 3254 valid samples, choosing 2048 subset
+12/30/2021 22:34:50 - INFO - SpanNER -   Loaded saved entities info
+12/30/2021 22:34:50 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:34:50 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:34:50 - INFO - SpanNER -   Loaded saved entities info
+12/30/2021 22:34:50 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:34:50 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:34:50 - INFO - SpanNER -   Loaded saved entity encodings
+12/30/2021 22:34:50 - INFO - SpanNER -   Starting training
+12/30/2021 22:34:50 - INFO - SpanNER -   device: cuda n_gpu: 4, distributed training: False
+12/30/2021 22:34:50 - INFO - SpanNER -   Created context IDs vector
+12/30/2021 22:34:50 - INFO - SpanNER -   Created label IDXs vector
+12/30/2021 22:34:50 - INFO - SpanNER -   Finished preparing training data
+12/30/2021 22:34:50 - INFO - SpanNER -    Num optimization steps = 2000
+12/30/2021 22:34:50 - INFO - SpanNER -    Num warmup steps = 0
+12/30/2021 22:34:50 - INFO - SpanNER -   Num samples per batch : 40
