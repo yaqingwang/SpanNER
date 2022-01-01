@@ -4,7 +4,6 @@ This is the implementation of the paper [Learning from Language Description: Low
 
 
 ## Overview
-<img src="./figs/metast.png" width="650"/>
 
 In this work we present SpanNER, which learns from natural language supervision to build Few-shot NER learner. At the same time, such a framework enables the
 identification of never-seen entity classes without using in-domain labeled data 
