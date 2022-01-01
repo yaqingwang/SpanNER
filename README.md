@@ -10,6 +10,10 @@ identification of never-seen entity classes without using in-domain labeled data
 You can find more details of this work in our [paper](https://arxiv.org/pdf/2109.05357.pdf).
 
 
+## TO-DO
+
+Release distantly-supervised checkpoint
+
 ## Setup Environment
 ### Install via pip:
 
