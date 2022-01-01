@@ -31,7 +31,6 @@ from pytorch_transformers.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
 from pytorch_transformers.optimization import WarmupLinearSchedule
 from pytorch_transformers.tokenization_bert import BertTokenizer
 
-
 from src.biencoder.biencoder import BiEncoderRanker
 from src.vcg_utils.measures import entity_linking_tp_with_overlap
 import logging
@@ -50,34 +49,33 @@ from transformers import (
 from seqeval.metrics import accuracy_score
 from seqeval.metrics import classification_report
 from seqeval.metrics import f1_score
-def transfer_to_iob(gold_mb,gold_label, label_map):
-    label_list= ['O'] * 128
+
+
+def transfer_to_iob(gold_mb, gold_label, label_map):
+    label_list = ['O'] * 128
     for i, mb in enumerate(gold_mb):
         start = mb[0]
-        end = mb[1]+1
+        end = mb[1] + 1
         label = label_map[gold_label[i]]
         for j in range(start, end):
             if j == start:
-                tag='B-'
+                tag = 'B-'
             else:
                 tag = 'I-'
             tag += label
-            label_list[j]=tag
+            label_list[j] = tag
     return label_list
-
-
-
 
 
 logger = None
 np.random.seed(1234)  # reproducible for FAISS indexer
 
-def evaluate(
-    reranker, eval_dataloader, params, device, logger,
-    cand_encs=None, faiss_index=None,
-    get_losses=False, cand_attention_mask=None, threshold=1
-):
 
+def evaluate(
+        reranker, eval_dataloader, params, device, logger,
+        cand_encs=None, faiss_index=None,
+        get_losses=False, cand_attention_mask=None, threshold=0.5
+):
     reranker.model.eval()
     if params["silent"]:
         iter_ = eval_dataloader
@@ -104,7 +102,7 @@ def evaluate(
     cand_encs_cpu = cand_encs.cpu()
 
     label_map = json.load(open(os.path.join(params['data_path'], 'label_map.json')))
-    label_map = {label_map[name]:name for name in label_map}
+    label_map = {label_map[name]: name for name in label_map}
 
     test_file = open(os.path.join(params['data_path'], 'test.jsonl'))
     test_data = []
@@ -114,11 +112,9 @@ def evaluate(
         label_mask.append(json.loads(l)['start_label_mask'])
     index = 0
 
-
-
     for step, batch in enumerate(iter_):
         batch = tuple(t.to(device) for t in batch)
-        context_input = batch[0]	
+        context_input = batch[0]
         candidate_input = batch[1]
         # (bs, num_actual_spans)
         label_ids = batch[2].cpu().numpy() if params["freeze_cand_enc"] else None
@@ -129,7 +125,6 @@ def evaluate(
         start_label_mask = batch[8]
         end_label_mask = batch[9]
 
-        
         with torch.no_grad():
             # evaluate with joint mention detection
             if params["freeze_cand_enc"]:
@@ -146,7 +141,7 @@ def evaluate(
                     if params['zero_shot']:
                         context_outs = reranker.encode_context(
                             context_input,
-                            num_cand_mentions=30,
+                            num_cand_mentions=50,
                             topK_threshold=0,
                             start_label_mask=start_label_mask,
                             end_label_mask=end_label_mask,
@@ -155,7 +150,7 @@ def evaluate(
                     else:
                         context_outs = reranker.encode_context(
                             context_input,
-                            num_cand_mentions=30,
+                            num_cand_mentions=50,
                             topK_threshold=-1,
                             start_label_mask=start_label_mask,
                             end_label_mask=end_label_mask,
@@ -173,47 +168,41 @@ def evaluate(
                 chosen_mention_bounds = context_outs['mention_bounds'].cpu().numpy()
                 pred_mention_mask = pred_mention_mask.bool()
 
-
-                #pred_mention_mask = mention_idx_mask
+                # pred_mention_mask = mention_idx_mask
                 embedding_ctxt = embedding_context[pred_mention_mask]
                 pred_mention_mask = pred_mention_mask.numpy()
 
-
                 if params['use_attention']:
                     if embedding_ctxt.size(0) != 0:
-                        top_cand_logits_shape = reranker.get_scores(embedding_ctxt, cand_encs, cand_attention_mask).cpu()
+                        top_cand_logits_shape = reranker.get_scores(embedding_ctxt, cand_encs,
+                                                                    cand_attention_mask).cpu()
                     else:
                         top_cand_logits_shape = embedding_ctxt.cpu().mm(cand_encs.cpu().mean(1).t())
                 else:
                     top_cand_logits_shape = embedding_ctxt.mm(cand_encs.t()).cpu()
 
-                top_cand_logits_shape, top_cand_indices_shape = torch.sort(top_cand_logits_shape, descending=True, dim=-1)
+                top_cand_logits_shape, top_cand_indices_shape = torch.sort(top_cand_logits_shape, descending=True,
+                                                                           dim=-1)
 
-                top_cand_logits = np.zeros((pred_mention_mask.shape[0], pred_mention_mask.shape[1], top_cand_indices_shape.size(-1)), dtype=np.float)
+                top_cand_logits = np.zeros(
+                    (pred_mention_mask.shape[0], pred_mention_mask.shape[1], top_cand_indices_shape.size(-1)),
+                    dtype=np.float)
                 top_cand_indices = np.zeros_like(pred_mention_mask, dtype=np.int)
                 top_cand_logits[pred_mention_mask] = top_cand_logits_shape
                 if len(top_cand_indices_shape.size()) == 1:
                     top_cand_indices_shape = top_cand_indices_shape.unsqueeze(0)
 
-                top_cand_indices[pred_mention_mask] = top_cand_indices_shape[:,0]
+                top_cand_indices[pred_mention_mask] = top_cand_indices_shape[:, 0]
 
-
-
-                type_prob = top_cand_logits[:,:,0]
-                # import pdb
-                # pdb.set_trace()
+                type_prob = top_cand_logits[:, :, 0]
                 if not params['entity_inference']:
-
                     scores = (np.log(softmax(top_cand_logits, -1)) + torch.sigmoid(
-                    context_outs['mention_logits'].unsqueeze(-1)).log().cpu().numpy())[:, :, 0]
-
+                        context_outs['mention_logits'].unsqueeze(-1)).log().cpu().numpy())[:, :, 0]
 
                 tmp_num_correct = 0.0
                 tmp_num_p = 0.0
                 tmp_num_g = 0.0
                 tmp_num_span_correct = 0.0
-
-
 
                 for i, ex in enumerate(top_cand_indices):
                     gold_mb = mention_idx[i][mention_idx_mask[i]]
@@ -221,10 +210,9 @@ def evaluate(
 
                     y_true = transfer_to_iob(gold_mb, gold_label_ids, label_map)
                     y_true_list.append(y_true)
-                    #overall_score_mask = scores[i][pred_mention_mask[i]] > -2.5
-                    #overall_score_mask = scores[i][pred_mention_mask[i]] > -5
+
                     if params['entity_inference']:
-                        unknown_score_mask = (type_prob[i][pred_mention_mask[i]] > -100000) #& overall_score_mask
+                        unknown_score_mask = (type_prob[i][pred_mention_mask[i]] > -100000)  # & overall_score_mask
                     else:
                         if not params['zero_shot']:
                             unknown_score_mask = (type_prob[i][pred_mention_mask[i]] > 0)
@@ -238,19 +226,21 @@ def evaluate(
                     try:
                         pred_mb = chosen_mention_bounds[i][pred_mention_mask[i]][overall_score_mask]
                     except:
-                        import  pdb
+                        import pdb
                         pdb.set_trace()
                     pred_label_ids = ex[pred_mention_mask[i]][overall_score_mask]
-                    y_pred = transfer_to_iob(pred_mb, pred_label_ids , label_map)
+                    y_pred = transfer_to_iob(pred_mb, pred_label_ids, label_map)
                     y_pred_list.append(y_pred)
                     try:
-                        gold_triples = [(str(gold_label_ids[j]), gold_mb[j][0], gold_mb[j][1]) for j in range(len(gold_mb))]
+                        gold_triples = [(str(gold_label_ids[j]), gold_mb[j][0], gold_mb[j][1]) for j in
+                                        range(len(gold_mb))]
                     except:
                         import pdb
                         pdb.set_trace()
                     pred_triples = [(str(pred_label_ids[j]), pred_mb[j][0], pred_mb[j][1]) for j in range(len(pred_mb))]
                     try:
-                        num_overlap_weak, num_overlap_strong, num_overlap_span = entity_linking_tp_with_overlap(gold_triples, pred_triples)
+                        num_overlap_weak, num_overlap_strong, num_overlap_span = entity_linking_tp_with_overlap(
+                            gold_triples, pred_triples)
                     except:
                         import pdb
                         pdb.set_trace()
@@ -286,8 +276,6 @@ def evaluate(
 
         nb_eval_steps += 1
 
-
-
     if cand_encs is not None:
         cand_encs = cand_encs.to("cpu")
         torch.cuda.empty_cache()
@@ -319,7 +307,8 @@ def evaluate(
     if normalized_eval_span_p + normalized_eval_span_r == 0:
         span_f1 = 0
     else:
-        span_f1 = 2 * normalized_eval_span_p * normalized_eval_span_r / (normalized_eval_span_p + normalized_eval_span_r)
+        span_f1 = 2 * normalized_eval_span_p * normalized_eval_span_r / (
+                    normalized_eval_span_p + normalized_eval_span_r)
     logger.info("F1: %.5f" % f1)
     logger.info("Span F1: %.5f" % span_f1)
     results["normalized_f1"] = f1
@@ -330,38 +319,28 @@ def evaluate(
     #
     # pdb.set_trace()
 
-    for i, line in enumerate(test_data):
-        line = line.split()
-        labels = y_true_list[i]
-        label_idx = 0
-        for j,word in enumerate(line):
-            if label_idx >= len(label_mask[i]):
-                break
-            while label_mask[i][label_idx] == 0:
-                label_idx += 1
-                if label_idx >= len(label_mask[i]):
-                    break
-
-            if label_idx >= len(labels)-1:
-                continue
-
-            label = labels[label_idx+1]
-            test_pred.write(word +' '+label+' '+y_pred_list[i][label_idx+1]+'\n')
-            label_idx += 1
-        test_pred.write('\n')
-    test_pred.close()
-
-
-
-
-
-
-
-
-    print(classification_report(y_true_list, y_pred_list, digits=3))
-
-
-
+    # for i, line in enumerate(test_data):
+    #     line = line.split()
+    #     labels = y_true_list[i]
+    #     label_idx = 0
+    #     for j, word in enumerate(line):
+    #         if label_idx >= len(label_mask[i]):
+    #             break
+    #         while label_mask[i][label_idx] == 0:
+    #             label_idx += 1
+    #             if label_idx >= len(label_mask[i]):
+    #                 break
+    #
+    #         if label_idx >= len(labels) - 1:
+    #             continue
+    #
+    #         label = labels[label_idx + 1]
+    #         test_pred.write(word + ' ' + label + ' ' + y_pred_list[i][label_idx + 1] + '\n')
+    #         label_idx += 1
+    #     test_pred.write('\n')
+    # test_pred.close()
+    #
+    # print(classification_report(y_true_list, y_pred_list, digits=3))
 
     return results
 
@@ -394,7 +373,6 @@ def get_scheduler(params, optimizer, len_train_data, logger):
     return scheduler
 
 
-
 def main(params):
     model_output_path = params["output_path"]
     if not os.path.exists(model_output_path):
@@ -402,7 +380,7 @@ def main(params):
     logger = utils.get_logger(params["output_path"])
 
     # Init model
-    #pdb.set_trace()
+    # pdb.set_trace()
     if len(params['gpu_ids']) > 1:
         os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(str(x) for x in params['gpu_ids'].split(','))
         params['data_parallel'] = True
@@ -410,14 +388,12 @@ def main(params):
         params["eval_batch_size"] = params["eval_batch_size"] * len(params['gpu_ids'].split(','))
     elif int(params['gpu_ids']) != -1:
         params['data_parallel'] = False
-        device_id=int(params['gpu_ids'])
+        device_id = int(params['gpu_ids'])
         torch.cuda.set_device(device_id)
     else:
         params['data_parallel'] = True
         params["train_batch_size"] = params["train_batch_size"] * torch.cuda.device_count()
         params["eval_batch_size"] = params["eval_batch_size"] * torch.cuda.device_count()
-
-
 
     reranker = BiEncoderRanker(params)
     tokenizer = reranker.tokenizer
@@ -430,8 +406,6 @@ def main(params):
         os.path.join(model_output_path, "training_params.txt"), str(params)
     )
 
-
-
     if params["gradient_accumulation_steps"] < 1:
         raise ValueError(
             "Invalid gradient_accumulation_steps parameter: {}, should be >= 1".format(
@@ -441,7 +415,7 @@ def main(params):
 
     # An effective batch size of `x`, when we are accumulating the gradient accross `y` batches will be achieved by having a batch size of `z = x / y`
     params["train_batch_size"] = (
-        params["train_batch_size"] // params["gradient_accumulation_steps"]
+            params["train_batch_size"] // params["gradient_accumulation_steps"]
     )
     train_batch_size = params["train_batch_size"]
     eval_batch_size = params["eval_batch_size"]
@@ -472,7 +446,6 @@ def main(params):
     else:
         valid_subset = len(valid_samples) - len(valid_samples) % torch.cuda.device_count()
 
-
     logger.info("Read %d valid samples, choosing %d subset" % (len(valid_samples), valid_subset))
 
     valid_data, valid_tensor_data, extra_ret_values = process_mention_data(
@@ -496,8 +469,6 @@ def main(params):
         valid_tensor_data, sampler=valid_sampler, batch_size=eval_batch_size
     )
 
-
-
     test_data, test_tensor_data, extra_ret_values = process_mention_data(
         samples=test_samples,  # use subset of valid data valid_samples[:valid_subset]
         tokenizer=tokenizer,
@@ -512,7 +483,6 @@ def main(params):
         candidate_token_ids=None,
         params=params,
     )
-
 
     test_tensor_data = TensorDataset(*test_tensor_data)
     test_sampler = SequentialSampler(test_tensor_data)
@@ -538,7 +508,6 @@ def main(params):
         if params["debug"]:
             cand_encs = cand_encs[:200]
 
-
         # build FAISS index
         if len(cand_encs) > 10000:
             cand_encs_index = DenseHNSWFlatIndexer(1)
@@ -547,7 +516,6 @@ def main(params):
             num_neighbors = 10
         else:
             cand_encs_index = None
-
 
     time_start = time.time()
     best_f1 = 0
@@ -583,9 +551,6 @@ def main(params):
         logger.info("Finished preparing training data")
     else:
         num_samples_per_batch = len(train_samples) // num_train_epochs
-
-
-
 
     trainer_path = params.get("path_to_trainer_state", None)
     optimizer = get_optimizer(model, params)
@@ -627,8 +592,9 @@ def main(params):
                 candidate_token_ids=candidate_token_ids,
                 params=params,
             )
-            logger.info("Finished preparing training data for epoch {}: {} samples".format(epoch_idx, len(train_tensor_data_tuple[0])))
-    
+            logger.info("Finished preparing training data for epoch {}: {} samples".format(epoch_idx, len(
+                train_tensor_data_tuple[0])))
+
         batch_train_tensor_data = TensorDataset(
             *list(train_tensor_data_tuple)
         )
@@ -648,19 +614,15 @@ def main(params):
         # #     cand_attention_mask=cand_attention_mask
         # )
 
-
-
         if params["silent"]:
             iter_ = train_dataloader
         else:
             iter_ = tqdm(train_dataloader, desc="Batch")
 
-
-
         for step, batch in enumerate(iter_):
             global_step += 1
             batch = tuple(t.to(device) for t in batch)
-            context_input = batch[0]	
+            context_input = batch[0]
             candidate_input = batch[1]
             label_ids = batch[2] if params["freeze_cand_enc"] else None
             start_label = batch[3]
@@ -670,7 +632,7 @@ def main(params):
             type_idx_mask = batch[7]
             start_label_mask = batch[8]
             end_label_mask = batch[9]
-            #pdb.set_trace()
+            # pdb.set_trace()
             if params["debug"] and label_ids is not None:
                 label_ids[label_ids > 199] = 199
 
@@ -682,28 +644,25 @@ def main(params):
             hard_negs_mask = None
             pos_cand_encs_input = cand_encs[label_ids.to("cpu")]
 
-            #pos_cand_encs_input[~mention_idx_mask] = 0
+            # pos_cand_encs_input[~mention_idx_mask] = 0
             pos_cand_encs_input[~type_idx_mask] = 0
 
             if params['use_attention']:
                 pos_cand_attention_mask = cand_attention_mask[label_ids.to("cpu")]
-                pos_cand_attention_mask[~type_idx_mask] =  0
-
+                pos_cand_attention_mask[~type_idx_mask] = 0
 
             # (bs, num_spans, embed_size)
 
-
-
             # mention_reps: (bs, max_num_spans, embed_size) -> masked_mention_reps: (all_pred_mentions_batch, embed_size)
 
-            #pdb.set_trace()
+            # pdb.set_trace()
 
             context_outs = reranker.encode_context(
                 context_input, gold_mention_bounds=mention_idxs,
                 gold_mention_bounds_mask=mention_idx_mask,
                 get_mention_scores=True,
             )
-            #pdb.set_trace()
+            # pdb.set_trace()
             mention_logits = context_outs['all_mention_logits']
             start_mention_logits = context_outs['all_mention_start_logits']
             end_mention_logits = context_outs['all_mention_end_logits']
@@ -711,7 +670,7 @@ def main(params):
             mention_reps = context_outs['mention_reps']
             masked_mention_reps = mention_reps[context_outs['mention_masks']]
 
-            #pdb.set_trace()
+            # pdb.set_trace()
 
             assert cand_encs is not None and label_ids is not None  # due to params["freeze_cand_enc"] being set
 
@@ -734,13 +693,11 @@ def main(params):
                 # import pdb
                 # pdb.set_trace()
 
-
                 # set "correct" closest entities to -1
                 # masked_label_ids: (all_pred_mentions_batch)
                 masked_label_ids = label_ids[mention_idx_mask]
 
-                #pdb.set_trace()
-
+                # pdb.set_trace()
 
                 neg_cand_encs_input_idxs[neg_cand_encs_input_idxs - masked_label_ids.to("cpu").unsqueeze(-1) == 0] = -1
 
@@ -755,7 +712,8 @@ def main(params):
                 # create neg_example_idx (corresponding example (in batch) for each negative)
                 # neg_example_idx: (bs * num_negatives)
                 neg_example_idx = torch.arange(neg_cand_encs_input_idxs.size(0)).unsqueeze(-1)
-                neg_example_idx = neg_example_idx.expand(neg_cand_encs_input_idxs.size(0), neg_cand_encs_input_idxs.size(2))
+                neg_example_idx = neg_example_idx.expand(neg_cand_encs_input_idxs.size(0),
+                                                         neg_cand_encs_input_idxs.size(2))
                 neg_example_idx = neg_example_idx.flatten()
 
                 # flatten and filter -1 (i.e. any correct/positive entities)
@@ -765,8 +723,7 @@ def main(params):
                 # mask invalid negatives (actually the positive example)
                 # (bs * num_negatives)
 
-                #pdb.set_trace()
-
+                # pdb.set_trace()
 
                 # (bs * num_negatives - invalid_negs, num_spans, embed_size)
                 neg_mention_idx_mask = mention_idx_mask[neg_example_idx]
@@ -775,13 +732,12 @@ def main(params):
                 neg_cand_encs_input = cand_encs[neg_cand_encs_input_idxs]
 
                 # (bs * num_negatives - invalid_negs, num_spans, embed_size)
-                #neg_mention_idx_mask = mention_idx_mask[neg_example_idx]
+                # neg_mention_idx_mask = mention_idx_mask[neg_example_idx]
                 neg_cand_encs_input[~neg_mention_idx_mask] = 0
 
                 if params['use_attention']:
                     neg_cand_attention_mask = cand_attention_mask[neg_cand_encs_input_idxs]
                     neg_cand_attention_mask[~neg_mention_idx_mask] = 0
-
 
                 # create input tensors (concat [pos examples, neg examples])
                 if mention_reps is not None:
@@ -807,10 +763,7 @@ def main(params):
                     all_cand_attention_mask = torch.cat([pos_cand_attention_mask, neg_cand_attention_mask]).to(device)
                     # else:
                     #     cand_encs_input
-                #pdb.set_trace()
-
-        
-
+                # pdb.set_trace()
 
             loss, _, _, _ = reranker(
                 context_input, candidate_input,
@@ -850,10 +803,6 @@ def main(params):
                 optimizer.step()
                 scheduler.step()
                 optimizer.zero_grad()
-
-
-
-
 
             if (global_step + 1) % (params["eval_interval"] * grad_acc_steps) == 0:
                 logger.info("Evaluation on the development dataset")
@@ -904,7 +853,7 @@ def main(params):
         #     get_losses=params["get_losses"],
         #     cand_attention_mask=cand_attention_mask
         # )
-        if  results is not None and results["normalized_f1"] > best_f1:
+        if results is not None and results["normalized_f1"] > best_f1:
             best_f1 = results["normalized_f1"]
 
             logger.info("***** Saving fine - tuned model *****")
@@ -917,15 +866,15 @@ def main(params):
                 "scheduler": scheduler.state_dict(),
             }, os.path.join(epoch_output_folder_path, "training_state.th"))
 
-        #logger.info("Train data evaluation")
+            # logger.info("Train data evaluation")
 
-        # results = evaluate(
-        #     reranker, train_dataloader, params,
-        #     cand_encs=cand_encs, device=device,
-        #     logger=logger, faiss_index=cand_encs_index,
-        #     get_losses=params["get_losses"],
-        #     cand_attention_mask=cand_attention_mask
-        # )
+            # results = evaluate(
+            #     reranker, train_dataloader, params,
+            #     cand_encs=cand_encs, device=device,
+            #     logger=logger, faiss_index=cand_encs_index,
+            #     get_losses=params["get_losses"],
+            #     cand_attention_mask=cand_attention_mask
+            # )
 
             ls = [best_score, results["normalized_f1"]]
             li = [best_epoch_idx, epoch_idx]

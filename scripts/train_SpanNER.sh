@@ -104,7 +104,7 @@ model_ckpt=$model_type
 
 if [ ${objective} = 'train' ]
 then
-  learning_rate=1e-5
+  learning_rate=2e-5
 else
   learning_rate=6e-6
 fi
@@ -130,7 +130,7 @@ then
      model_path_arg="--path_to_model /media/6T/yaqing/experiments/${model_data##*/}/${model_type}_${use_attention}_${mention_agg_type}_${context_length}_${load_saved_cand_encs}_${adversarial}_bert_${model_size}_${mention_scoring_method}/epoch_${epoch}/pytorch_model.bin"
      #model_path_arg='--path_to_model /media/6T/yaqing/experiments/ontonotes5_gold/WIKI_NER_bert-base-uncased_false_all_avg_linear_128_true_false_bert_base_qa_linear/epoch_12/pytorch_model.bin'
      #model_path_arg='--path_to_model /media/6T/yaqing/experiments/ontonotes5_gold/WIKI_NER_bert-base-uncased_true_all_avg_linear_128_true_false_bert_base_qa_linear/epoch_8/pytorch_model.bin'
-     model_path_arg='--path_to_model /media/6T/yaqing/experiments/ontonotes5_gold/bert-base-uncased_true_all_avg_linear_128_true_false_bert_base_qa_linear/epoch_5/pytorch_model.bin'
+     #model_path_arg='--path_to_model /media/6T/yaqing/experiments/ontonotes5_gold/bert-base-uncased_true_all_avg_linear_128_true_false_bert_base_qa_linear/epoch_5/pytorch_model.bin'
    fi
   if [ "${data}" != "WIKI_NER"  ]
   then
@@ -160,7 +160,7 @@ then
     ${model_path_arg} ${cand_enc_args} \
     --title_key entity \
     --data_path ${data_path} \
-    --num_train_epochs 1000 \
+    --num_train_epochs 50 \
     --learning_rate ${learning_rate} \
     --max_context_length ${context_length} \
     --max_cand_length 128 \
@@ -168,7 +168,7 @@ then
     --eval_batch_size ${eval_batch_size} \
     --bert_model ${model_ckpt} \
     --mention_scoring_method ${mention_scoring_method} \
-    --eval_interval 20 \
+    --eval_interval 10 \
     --last_epoch ${epoch} \
     --shuffle True  \
     --gpu_ids ${gpu_ids} \

@@ -240,7 +240,7 @@ class SpanParser(argparse.ArgumentParser):
         parser.add_argument("--max_grad_norm", default=1.0, type=float)
         parser.add_argument(
             "--learning_rate",
-            default=3e-5,
+            default=2e-5,
             type=float,
             help="The initial learning rate for Adam.",
         )
@@ -266,7 +266,7 @@ class SpanParser(argparse.ArgumentParser):
         )
         parser.add_argument(
             "--warmup_proportion",
-            default=0.000,
+            default=0.00,
             type=float,
             help="Proportion of training to perform linear learning rate warmup for. "
             "E.g., 0.1 = 10% of training.",
